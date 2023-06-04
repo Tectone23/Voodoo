@@ -1,7 +1,7 @@
 <br/>
 <p align="center">
 
-  ![Screen Shot](assets/logo.png)
+  <img src="assets/logo.png" height=200>
   <h3 align="center">Voodoo</h3>
 
   <p align="center">
