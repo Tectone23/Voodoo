@@ -62,12 +62,9 @@ fn main() {
 			}
 		}
 		output.write(
-			'{
-	"project_name": "example", 
-	"project_ver": "0.0.1",
-	"pulled_files": [],
-	"pushed_files": []
-}'.bytes()
+			'[build]
+python-versions = ">=3.8"
+cmake-versions = "3.22.1"'.bytes()
 		)!
 	} else
 
