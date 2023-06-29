@@ -90,12 +90,15 @@ pub fn load_config() Config {
 	mut components := []ComponentConfig{}
 	mut affected_paths := []string{}
 
-	for mod in  conf.value('component').array() {
+	for mod in  conf.value('Component').array() {
 		component := to.json(mod)
 		cmp := json.decode(ComponentConfig, component) or {
 			panic(err.msg())
 		}
 		components << cmp
+
+
+		println(cmp)
 
 		for path in cmp.modified_files {
 			affected_paths << path["target"]
@@ -147,6 +150,7 @@ category = \"${component.category}\"
 optional = \"${component.optional}\"
 modified_files = [
 $modified_files]
+
 "
 	}
 
