@@ -34,7 +34,7 @@ pub fn (adb ADBConnector) pull_file(target string) string {
 	target_doll := adb.get_device_list()[0]
 	println("Preparing to pull directory ${target} from doll ${target_doll}")
 
-	out := "src/" + target.split("/")[target.split("/").len-1]
+	out := "components/" + target.split("/")[target.split("/").len-1]
 
 	res := os.execute("adb pull ${target} ${out}")
 	if res.exit_code != 0 {

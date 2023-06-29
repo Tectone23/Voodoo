@@ -46,9 +46,12 @@ fn main() {
 	// Create ADB connector
 	adb := ADBConnector {}
 
+	// Ensure device is attached
+	device_attached := adb.get_device_list().len > 0
+
 	if new {
 		// Create a new project
-		os.mkdir_all("src") or {
+		os.mkdir_all("components") or {
 			eprintln("Unable to create directories!")
 			exit(1)
 		}
@@ -69,6 +72,12 @@ fn main() {
 	} else
 
 	if !restart_service.is_blank() {
+		if !device_attached { raise(&Exception{
+			msg: "No device detected"
+			source: "restart_service"
+			hint: "Is the device attached to the host?"
+		}) }
+
 		if passcode.is_blank() {
 			println("Please provide a passcode as well")
 			exit(1)
@@ -79,6 +88,12 @@ fn main() {
 	}
 
 	if !pull.is_blank() {
+		if !device_attached { raise(&Exception{
+			msg: "No device detected"
+			source: "restart_service"
+			hint: "Is the device attached to the host?"
+		}) }
+
 		// Check if the current directory is a project
 		// And load the config
 		mut config := load_config()
@@ -101,17 +116,22 @@ fn main() {
 	} else
 
 	if publish {
+		if !device_attached { raise(&Exception{
+			msg: "No device detected"
+			source: "restart_service"
+			hint: "Is the device attached to the host?"
+		}) }
 		// Check if the current directory is a project
 		// And load the config
 		mut config := load_config()
 
 		// Now we are going to go through every file and push it
 
-		for file in config.pulled_files {
-			current_file := file.split("/")[file.split("/").len-1]
-
-			adb.push_file("src/"+current_file, file)
-		}
+		// for file in config.pulled_files {
+		// 	current_file := file.split("/")[file.split("/").len-1]
+		//
+		// 	adb.push_file("components/"+current_file, file)
+		// }
 
 	} else
 	
@@ -128,6 +148,11 @@ fn main() {
 	} else
 
 	if logs {
+		if !device_attached { raise(&Exception{
+			msg: "No device detected"
+			source: "restart_service"
+			hint: "Is the device attached to the host?"
+		}) }
 		if debug { println("[Main] Using ADBConnector to receive logs. Command executed is `adb exec-out journalctl -n 20`") }
 		for l in adb.get_logs(target) {
 			println(l)
