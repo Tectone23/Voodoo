@@ -7,6 +7,7 @@ import logging { Exception, Warning, raise }
 import json
 
 pub struct ComponentConfig {
+pub:
 	filename string
 	version string
 	description string
@@ -97,8 +98,6 @@ pub fn load_config() Config {
 		}
 		components << cmp
 
-
-		println(cmp)
 
 		for path in cmp.modified_files {
 			affected_paths << path["target"]

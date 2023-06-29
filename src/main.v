@@ -124,11 +124,14 @@ cmake-versions = "3.22.1"'.bytes()
 
 		// Now we are going to go through every file and push it
 
-		// for file in config.pulled_files {
-		// 	current_file := file.split("/")[file.split("/").len-1]
-		//
-		// 	adb.push_file("components/"+current_file, file)
-		// }
+		for component in config.components {
+			for file in component.modified_files {
+				path := file["path"]
+				target_path := file["target"]
+
+				adb.push_file(path, target_path)
+			}
+		}
 
 	} else
 	
