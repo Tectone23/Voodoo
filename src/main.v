@@ -31,7 +31,7 @@ fn main() {
 	restart_service := fp.string('restart_service', `r`, '', 'restart a specific service')
 	publish := fp.bool('publish', `u`, false, 'publish project to device')
 	new    := fp.bool('new', `n`, false, 'create new project from doll device path')
-	list   := fp.bool('dolls', `d`, false, 'list all attached doll devices')
+	list   := fp.bool('dolls', `l`, false, 'list all attached doll devices')
 	shorthand := fp.bool('short', `z`, false, 'enable shorthand syntax for use in scripts')
 	debug  := fp.bool('debug', `d`, false, 'enable debugging')
 	logs   := fp.bool('logs', `l`, false, 'show device logs')
