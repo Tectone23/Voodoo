@@ -66,6 +66,8 @@ fn main() {
 python-versions = ">=3.8"
 cmake-versions = "3.22.1"'.bytes()
 		)!
+		println("Done!")
+		exit(0)
 	} else
 
 	if !restart_service.is_blank() {
