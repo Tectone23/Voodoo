@@ -1,40 +1,38 @@
 module main
 
 /*
-	Imports:
+Imports:
 
 	flag - For cli args
 	os 	 - Args
 */
-
 import flag
 import os
-import logging { Exception, Warning, raise }
+import logging { Exception, raise }
 import adblib { ADBConnector }
-import dollconfig { Config, load_config }
+import dollconfig { load_config }
 
 fn main() {
 	mut fp := flag.new_flag_parser(os.args)
 
-	fp.application("voodoo")
-	fp.version("0.0.3")
-	fp.description(
-		'Voodoo - V|oo|-do|o| a change to the doll system\n' +
-		'Manipulate an UT system like a voodoo doll'
-	)
+	fp.application('voodoo')
+	fp.version('0.0.3')
+	fp.description('Voodoo - V|oo|-do|o| a change to the doll system\n' +
+		'Manipulate an UT system like a voodoo doll')
 	fp.skip_executable()
 
 	source := fp.string('source', `s`, '', 'specify project source')
 	target := fp.string('target', `t`, '', 'specify a target doll')
-	pull   := fp.string('pull', `p`, '', 'specify path to pull from target')
+	pull := fp.string('pull', `p`, '', 'specify path to pull from target')
 	passcode := fp.string('passcode', `w`, '', 'device passcode')
 	restart_service := fp.string('restart_service', `r`, '', 'restart a specific service')
 	publish := fp.bool('publish', `u`, false, 'publish project to device')
-	new    := fp.bool('new', `n`, false, 'create new project from doll device path')
-	list   := fp.bool('dolls', `l`, false, 'list all attached doll devices')
+	new := fp.bool('new', `n`, false, 'create new project from doll device path')
+	list := fp.bool('dolls', `l`, false, 'list all attached doll devices')
 	shorthand := fp.bool('short', `z`, false, 'enable shorthand syntax for use in scripts')
-	debug  := fp.bool('debug', `d`, false, 'enable debugging')
-	logs   := fp.bool('logs', `l`, false, 'show device logs')
+	debug := fp.bool('debug', `d`, false, 'enable debugging')
+	logs := fp.bool('logs', `l`, false, 'show device logs')
+	analyze := fp.bool('analyze', `a`, false, 'provides analysis of files to be modified, compares them to original files on an existing device')
 	symlink := fp.bool('symlink', `v`, false, 'symlink voodoo to use systemwide')
 	spook := fp.bool('spook', `_`, false, 'does spooky things')
 
@@ -44,41 +42,39 @@ fn main() {
 	}
 
 	// Create ADB connector
-	adb := ADBConnector {}
+	adb := ADBConnector{}
 
 	// Ensure device is attached
 	device_attached := adb.get_device_list().len > 0
 
 	if new {
 		// Create a new project
-		os.mkdir_all("components") or {
-			eprintln("Unable to create directories!")
+		os.mkdir_all('components') or {
+			eprintln('Unable to create directories!')
 			exit(1)
 		}
 		mut output := os.create('config.doll') or {
-    		os.open('config.doll') or {
-				eprintln("Unable to create configuration file!")
+			os.open('config.doll') or {
+				eprintln('Unable to create configuration file!')
 				exit(1)
 			}
 		}
-		output.write(
-			'[build]
+		output.write('[build]
 python-versions = ">=3.8"
-cmake-versions = "3.22.1"'.bytes()
-		)!
-		println("Done!")
+cmake-versions = "3.22.1"'.bytes())!
+		println('Done!')
 		exit(0)
-	} else
-
-	if !restart_service.is_blank() {
-		if !device_attached { raise(&Exception{
-			msg: "No device detected"
-			source: "restart_service"
-			hint: "Is the device attached to the host?"
-		}) }
+	} else if !restart_service.is_blank() {
+		if !device_attached {
+			raise(&Exception{
+				msg: 'No device detected'
+				source: 'restart_service'
+				hint: 'Is the device attached to the host?'
+			})
+		}
 
 		if passcode.is_blank() {
-			println("Please provide a passcode as well")
+			println('Please provide a passcode as well')
 			exit(1)
 		}
 
@@ -87,11 +83,13 @@ cmake-versions = "3.22.1"'.bytes()
 	}
 
 	if !pull.is_blank() {
-		if !device_attached { raise(&Exception{
-			msg: "No device detected"
-			source: "restart_service"
-			hint: "Is the device attached to the host?"
-		}) }
+		if !device_attached {
+			raise(&Exception{
+				msg: 'No device detected'
+				source: 'restart_service'
+				hint: 'Is the device attached to the host?'
+			})
+		}
 
 		// Check if the current directory is a project
 		// And load the config
@@ -99,27 +97,100 @@ cmake-versions = "3.22.1"'.bytes()
 
 		// Check if file already exists, ask whether the user wants us to overwrite
 		if config.pulled_exists(pull) {
-			confirm := os.input("Pulled file exists, overwrite? [y/*] ")
+			confirm := os.input('Pulled file exists, overwrite? [y/*] ')
 			if confirm != 'y' {
 				exit(0)
 			}
 		}
+		println('Preparing to pull directory ${target}')
 
 		// File for example usage: /usr/share/lomiri/Greeter/Clock.qml
-		adb.pull_file(pull)
+		adb.pull_file(pull, '')
 
 		// We need to add this pull information into the project config file
 		config.add_pulled(pull)
 
 		config.save_config()
-	} else
 
-	if publish {
-		if !device_attached { raise(&Exception{
-			msg: "No device detected"
-			source: "restart_service"
-			hint: "Is the device attached to the host?"
-		}) }
+		// Say that we are successful
+		println('Done')
+	} else if analyze {
+		if !device_attached {
+			raise(&Exception{
+				msg: 'No device detected'
+				source: 'restart_service'
+				hint: 'Is the device attached to the host?'
+			})
+		}
+
+		// Load config and get list of components
+
+		mut config := load_config()
+
+		println('Loaded project doll config!')
+
+		print('Component Entities:\n')
+
+		// Issue counter!
+		issues := 0
+
+		for component in config.components {
+			for file in component.modified_files {
+				println('\t[ComponentEntity] ${file['path']} -> ${file['target']}')
+
+				// Calculate differences
+				// We need to pull the original versions
+				adb.pull_file(file['target'], '.sample')
+
+				// Run diff
+				raw_out := os.execute("diff -U 0 ${file['path']} .sample | grep -c \"^@@\" ")
+				// Strip
+				clean_out := raw_out.output.trim_space()
+				println('\t${clean_out} differences found')
+
+				// Show differences
+				// u8 workaround
+				if !clean_out.contains_only('1234567890') {
+					raise(&Exception{
+						msg: 'Failed to calculate differences'
+						source: 'analyze'
+						hint: 'Is the device attached to the host?'
+					})
+				}
+
+				// To int
+				num_occur := clean_out.i64()
+
+				if num_occur > 0 {
+					println(os.execute("diff ${file['path']} .sample | awk '/^[+]/ {print substr($0, 0)} /^[^-]/ {print substr($0, 0)}'").output
+						.trim_space())
+				}
+
+				// Remove sample
+				// It should exist
+				os.rm('.sample') or {
+					raise(&Exception{
+						msg: 'Failed to delete .sample file'
+						source: 'analyze'
+						hint: 'Is the file corrupt?'
+					})
+				}
+			}
+		}
+
+		if issues > 0 {
+			println('[Warning] ${issues} issues found!')
+		} else {
+			println('All good to go!')
+		}
+	} else if publish {
+		if !device_attached {
+			raise(&Exception{
+				msg: 'No device detected'
+				source: 'restart_service'
+				hint: 'Is the device attached to the host?'
+			})
+		}
 		// Check if the current directory is a project
 		// And load the config
 		mut config := load_config()
@@ -128,75 +199,72 @@ cmake-versions = "3.22.1"'.bytes()
 
 		for component in config.components {
 			for file in component.modified_files {
-				path := file["path"]
-				target_path := file["target"]
+				path := file['path']
+				target_path := file['target']
 
 				adb.push_file(path, target_path)
 			}
 		}
-
-	} else
-	
-	if list {
-		if debug { println("[Main] Contact adb for device list") }
-		dolls := adb.get_device_list()
-		
-		// Display dolls, use shorthand by default
-		if !shorthand { println("Dolls attached to host:") }
-		for doll in dolls {
-			if shorthand { println(doll) }
-			else { println("doll: ${doll}") }
+	} else if list {
+		if debug {
+			println('[Main] Contact adb for device list')
 		}
-	} else
+		dolls := adb.get_device_list()
 
-	if logs {
-		if !device_attached { raise(&Exception{
-			msg: "No device detected"
-			source: "restart_service"
-			hint: "Is the device attached to the host?"
-		}) }
-		if debug { println("[Main] Using ADBConnector to receive logs. Command executed is `adb exec-out journalctl -n 20`") }
+		// Display dolls, use shorthand by default
+		if !shorthand {
+			println('Dolls attached to host:')
+		}
+		for doll in dolls {
+			if shorthand {
+				println(doll)
+			} else {
+				println('doll: ${doll}')
+			}
+		}
+	} else if logs {
+		if !device_attached {
+			raise(&Exception{
+				msg: 'No device detected'
+				source: 'restart_service'
+				hint: 'Is the device attached to the host?'
+			})
+		}
+		if debug {
+			println('[Main] Using ADBConnector to receive logs. Command executed is `adb exec-out journalctl -n 20`')
+		}
 		for l in adb.get_logs(target) {
 			println(l)
 		}
-	} else
-
-	if symlink {
-		mut link_path := ""
+	} else if symlink {
+		mut link_path := ''
 		link_dir := '/usr/local/bin'
 		if !os.exists(link_dir) {
 			os.mkdir_all(link_dir) or { panic(err) }
 		}
 		origin := os.getwd() + '/voodoo'
 		link_path = link_dir + '/voodoo'
-		if debug { println("[Main] Going to try and symlink ${origin} to ${link_path}") }
+		if debug {
+			println('[Main] Going to try and symlink ${origin} to ${link_path}')
+		}
 
 		os.symlink(origin, link_path) or {
 			eprintln('Failed to create symlink "${link_path}" to "${origin}". Try again with sudo. If that *still* doesnt work, please make a manual soft link')
 			exit(1)
 		}
-	} else
-
-	if !source.is_blank() && !os.exists(source) {
-		eprintln("Project source path does not exist or wasnt specified!")
+	} else if !source.is_blank() && !os.exists(source) {
+		eprintln('Project source path does not exist or wasnt specified!')
 		exit(1)
-	} else 
-
-
-	if spook {
-		println(
-'
+	} else if spook {
+		println("
       |\\      _,,,---,,_
-ZZZzz /,`.-\'`\'    -.  ;-;;,_
-     |,4-  ) )-,_. ,\\ (  `\'-\'
-    \'---\'\'(_/--\'  `-\'\\_)  
+ZZZzz /,`.-'`'    -.  ;-;;,_
+     |,4-  ) )-,_. ,\\ (  `'-'
+    '---''(_/--'  `-'\\_)  
 
 Credit - Felix Lee 
-')
-	} else
-
-	{
-		println("No action specified")
+")
+	} else {
+		println('No action specified')
 	}
-
 }
